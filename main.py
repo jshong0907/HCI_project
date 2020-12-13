@@ -9,6 +9,12 @@ from kivy.uix.dropdown import DropDown
 from kivy.uix.scrollview import ScrollView
 from kivy.core.window import Window
 from kivy.core.image import Image
+from kivy.factory import Factory
+from kivy.properties import ObjectProperty
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.popup import Popup
+
+import os
 
 # vertical한 레이아웃
 class TempLayout(BoxLayout):
@@ -40,6 +46,11 @@ class MainLayout(BoxLayout):
         self.add_widget(self.imageLayout)
         self.add_widget(self.interfaceLayout)
 
+# LoadDialog
+class LoadDialog(FloatLayout):
+    load = ObjectProperty(None)
+    cancel = ObjectProperty(None)
+
 # 시작 시 좌측 이미지 출력
 class ImageLayout(BoxLayout):
     def __init__(self, **kwargs):
@@ -47,6 +58,9 @@ class ImageLayout(BoxLayout):
         self.spacing = 10
         self.paintWidget = PaintWidget(size=self.size)
         self.add_widget(self.paintWidget)
+        self.btn = Button(text='File Load', size_hint=(None, .1), pos_hint=({'center_x': 0.5, 'center_y': 0.5}))
+        self.btn.bind(on_release=self.show_load)
+        self.add_widget(self.btn)
         with self.canvas.before:
             self.rect = Rectangle(source = "./test.jpg", size=self.size, pos=self.pos)
             self.bind(size=self._update_rect, pos=self._update_rect)
@@ -54,6 +68,27 @@ class ImageLayout(BoxLayout):
     def _update_rect(self, instance, value):
         self.rect.pos = self.pos[0], (self.size[1] - self.size[0])/2 + self.pos[0]
         self.rect.size = self.size[0], self.size[0]
+
+    loadfile = ObjectProperty(None)
+
+    # LoadDiaglog
+    def dismiss_popup(self):
+        self._popup.dismiss()
+
+    def show_load(self, instance):
+        content = LoadDialog(load=self.load, cancel=self.dismiss_popup)
+        self._popup = Popup(title="Load file", content=content,
+                            size_hint=(0.9, 0.9))
+        self._popup.open()
+
+    def load(self, path, filename):
+        self.rect.source = filename[0]
+        self.remove_widget(self.btn)
+        self.dismiss_popup()
+        
+
+Factory.register('Root', cls=ImageLayout)
+Factory.register('LoadDialog', cls=LoadDialog)
 
 # color를 parameter로 받는 그리기 위젯
 class PaintWidget(Widget):
