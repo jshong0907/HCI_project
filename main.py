@@ -93,26 +93,6 @@ class ImageLayout(BoxLayout):
 Factory.register('Root', cls=ImageLayout)
 Factory.register('LoadDialog', cls=LoadDialog)
 
-    loadfile = ObjectProperty(None)
-
-    # LoadDiaglog
-    def dismiss_popup(self):
-        self._popup.dismiss()
-
-    def show_load(self, instance):
-        content = LoadDialog(load=self.load, cancel=self.dismiss_popup)
-        self._popup = Popup(title="Load file", content=content,
-                            size_hint=(0.9, 0.9))
-        self._popup.open()
-
-    def load(self, path, filename):
-        self.rect.source = filename[0]
-        self.remove_widget(self.btn)
-        self.dismiss_popup()
-
-Factory.register('Root', cls=ImageLayout)
-Factory.register('LoadDialog', cls=LoadDialog)
-
 # color를 parameter로 받는 그리기 위젯
 class PaintWidget(Widget):
     def __init__(self, color=(0, 0, 0, 0), **kwargs):
