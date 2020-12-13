@@ -8,6 +8,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.dropdown import DropDown
 from kivy.uix.scrollview import ScrollView
 from kivy.core.window import Window
+from kivy.core.image import Image
 
 # vertical한 레이아웃
 class TempLayout(BoxLayout):
@@ -21,6 +22,12 @@ class TempScroll(ScrollView):
         super(TempScroll, self).__init__(**kwargs)
         self.do_scroll_x = False
         self.do_scroll_y = True
+
+class GuideLayout(BoxLayout):
+    def __init__(self, **kwargs):
+        super(GuideLayout, self).__init__(**kwargs)
+        self.selectColor = SelectColor()
+        self.guide_type = "None"
 
 class MainLayout(BoxLayout):
     def __init__(self, **kwargs):
@@ -38,27 +45,28 @@ class ImageLayout(BoxLayout):
     def __init__(self, **kwargs):
         super(ImageLayout, self).__init__(**kwargs)
         self.spacing = 10
-        self.paintWidget = PaintWidget()
+        self.paintWidget = PaintWidget(size=self.size)
         self.add_widget(self.paintWidget)
         with self.canvas.before:
-            self.rect = Rectangle(size=self.size, pos=self.pos)
+            self.rect = Rectangle(source = "./test.jpg", size=self.size, pos=self.pos)
             self.bind(size=self._update_rect, pos=self._update_rect)
-            self.rect.source = "./test.jpg"
             
     def _update_rect(self, instance, value):
-        self.rect.pos = instance.pos
-        self.rect.size = instance.size
+        self.rect.pos = self.pos[0], (self.size[1] - self.size[0])/2 + self.pos[0]
+        self.rect.size = self.size[0], self.size[0]
 
 # color를 parameter로 받는 그리기 위젯
 class PaintWidget(Widget):
-    def __init__(self, color=(0, 0, 0, 1), **kwargs):
+    def __init__(self, color=(0, 0, 0, 0), **kwargs):
         super(PaintWidget, self).__init__(**kwargs)
         self.color = color
+        self.brush_size = 2
+
     def on_touch_down(self, touch):
+        print(self.size)
         with self.canvas:
             Color(*self.color)
-            d = 10
-            touch.ud['line'] = Line(points=(touch.x, touch.y), width=2)
+            touch.ud['line'] = Line(points=(touch.x, touch.y), width=self.brush_size)
             
     def on_touch_move(self, touch):
         touch.ud['line'].points += [touch.x, touch.y]
@@ -69,10 +77,11 @@ class InterfaceLayout(BoxLayout):
         super(InterfaceLayout, self).__init__(**kwargs)
         self.orientation = "horizontal"
         self.spacing = 10
+        self.guidelayout = GuideLayout()
         # 좌측에 화장기법 및 브러쉬 선택, 가이드라인 포함 레이아웃
         self.add_widget(MakeupLayout())
         # 우측에 색상 선택 및 가이드라인 선택 레이아웃
-        self.add_widget(TempLayout())
+        self.add_widget(self.guidelayout)
 
 # 화장기법 및 브러쉬 선택, 가이드라인 포함 레이아웃
 class MakeupLayout(BoxLayout):
@@ -158,7 +167,6 @@ class SelectMakeUpTypeTemp(BoxLayout):
             self.selectFacePart.height+=60
             self.size_hint_y=None
             self.height+=60
-            #self.height=120
             self.add_widget(self.selectBrushType)
             self.btn_pressed=True
         else:
@@ -172,6 +180,8 @@ class SelectBrushType(BoxLayout):
     def __init__(self, **kwargs):
         super(SelectBrushType, self).__init__(**kwargs)
         self.orientation="horizontal"
+        self.button_pressed=False
+        self.selectColor = SelectColor()
         self.button1 = Button(text="1")
         self.button2 = Button(text="2")
         self.button3 = Button(text="3")
@@ -183,17 +193,48 @@ class SelectBrushType(BoxLayout):
         self.add_widget(self.button1)
         self.add_widget(self.button2)
         self.add_widget(self.button3)
-        
 
     def brush_selected(self, instance):
-        self.main_layout.imageLayout
-
         main_layout = self
         for i in range(7):
             main_layout = main_layout.parent
-            print(main_layout)
         self.main_layout = main_layout
+        self.paintWidget = self.main_layout.imageLayout.paintWidget.brush_size=int(instance.text)
+        self.guidelayout = self.main_layout.interfaceLayout.guidelayout
+        if self.guidelayout.guide_type != 'color':
+            self.guidelayout.add_widget(self.guidelayout.selectColor)
+            self.guidelayout.guide_type = 'color'
+        """ else:
+            self.guidelayout.remove_widget(self.guidelayout.selectColor)
+            self.button_pressed=False """
+        
 
+class SelectColor(GridLayout):
+    def __init__(self, **kwargs):
+        super(SelectColor, self).__init__(**kwargs)
+        self.cols=2
+        colors = ['Blue', 'Red', 'Green', 'White']
+        color_buttons = []
+        for color in colors:
+            btn = Button(text=color)
+            btn.bind(on_press=self.color_selected)
+            self.add_widget(btn)
+            color_buttons.append(btn)
+
+    def color_selected(self, instance):
+        main_layout = self
+        for i in range(3):
+            main_layout = main_layout.parent
+        self.main_layout = main_layout
+        self.paintWidget = self.main_layout.imageLayout.paintWidget
+        print(self.paintWidget.size)
+        print(self.paintWidget.canvas)
+        if instance.text=="Blue":
+            self.paintWidget.color=(0, 0, 1, 0.6)
+        elif instance.text=="Red":
+            self.paintWidget.color=(1, 0, 0, 0.6)
+        elif instance.text=="Green":
+            self.paintWidget.color=(0, 1, 0, 0.6)
 
 # 스크롤 뷰로 생성
 '''
