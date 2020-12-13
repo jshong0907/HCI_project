@@ -8,6 +8,9 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.dropdown import DropDown
 from kivy.uix.scrollview import ScrollView
 from kivy.core.window import Window
+from kivy.uix.popup import Popup
+from kivy.properties import ObjectProperty
+from kivy.uix.floatlayout import FloatLayout
 
 # vertical한 레이아웃
 class TempLayout(BoxLayout):
@@ -33,6 +36,12 @@ class MainLayout(BoxLayout):
         self.add_widget(self.imageLayout)
         self.add_widget(self.interfaceLayout)
 
+# LoadDialog
+class LoadDialog(FloatLayout):
+    load = ObjectProperty(None)
+    cancel = ObjectProperty(None)
+
+
 # 시작 시 좌측 이미지 출력
 class ImageLayout(BoxLayout):
     def __init__(self, **kwargs):
@@ -48,6 +57,23 @@ class ImageLayout(BoxLayout):
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
+    #Load Image
+    def dismiss_popup(self):
+        self._popup.dismiss()
+
+    def show_load(self):
+        content = ImageLayout(load=self.load, cancel=self.dismiss_popup)
+        self._popup = Popup(title="Load file", content=content,
+                            size_hint=(0.9, 0.9))
+        self._popup.open()
+
+    def load(self, path, filename):
+        with open(os.path.join(path, filename[0])) as stream:
+            pass
+            #self.text_input.text = stream.read()
+        self.ids.imageView.source = filename[0]
+
+        self.dismiss_popup()
 
 # color를 parameter로 받는 그리기 위젯
 class PaintWidget(Widget):
