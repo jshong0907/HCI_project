@@ -9,6 +9,7 @@ from kivy.uix.dropdown import DropDown
 from kivy.uix.scrollview import ScrollView
 from kivy.core.window import Window
 from kivy.core.image import Image
+import os
 
 # vertical한 레이아웃
 class TempLayout(BoxLayout):
