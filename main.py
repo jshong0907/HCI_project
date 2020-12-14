@@ -15,9 +15,13 @@ from kivy.lang import Builder
 from kivy.factory import Factory
 from kivy.utils import *
 from random import random
+from subprocess import Popen, PIPE
 
 import os
 
+from beautygan import BeautyGAN
+
+img_path = ''
 # vertical한 레이아웃
 class TempLayout(BoxLayout):
     def __init__(self, **kwargs):
@@ -31,11 +35,53 @@ class TempScroll(ScrollView):
         self.do_scroll_x = False
         self.do_scroll_y = True
 
-class GuideLayout(BoxLayout):
+class GuideLayout(ScrollView):
     def __init__(self, **kwargs):
         super(GuideLayout, self).__init__(**kwargs)
         self.selectColor = SelectColor()
         self.guide_type = "None"
+        self.size=(Window.width, Window.height)
+        self.exist=False
+        self.selectColor = SelectColor()
+        self.guide_type = "None"
+
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+    
+    def guide_select(self, paths):
+        self.clear_widgets()
+        self.add_widget(SelectGuideLayout(paths, size_hint=(1, 1)))
+
+
+class SelectGuideLayout(GridLayout):
+    def __init__(self, paths, **kwargs):
+        super(SelectGuideLayout, self).__init__(**kwargs)
+        #self.rows=len(paths)
+        self.cols=1
+        self.spacing=10
+        self.size_hint_y=None
+        self.bind(minimum_height=self.setter('height'))
+        self.first=True
+        # self.orientation = 'vertical'
+        self.paths = paths
+        idx = 0
+        for path in self.paths:  
+            # guideline = Button(background_normal=path, size_hint_y=None, height=self.width, border=(0, 0, 0, 0))
+            guideline = Button(background_normal=path, size_hint=(1, None), size=(self.size[0], 200), border=(0,0,0,0))
+            guideline.bind(on_press=self.guideimg_seleted)
+            self.add_widget(guideline)
+            idx += 1
+
+    def guideimg_seleted(self, instance):
+        print(instance.background_normal)
+        # pop = PopupLayout(title='guideline', content=Image(source=instance.background_normal), size_hint=(None, None), size=(400, 400))
+        # pop.open()
+
+        Popen(['python', 'guide.py', '--path', instance.background_normal], shell=True)
+           
+
+
 
 class MainLayout(BoxLayout):
     def __init__(self, **kwargs):
@@ -88,6 +134,8 @@ class ImageLayout(FloatLayout):
         self._popup.open()
 
     def load(self, path, filename):
+        global img_path
+        img_path = filename[0]
         self.rect.source = filename[0]
         self.remove_widget(self.btn)
         self.dismiss_popup()
@@ -115,6 +163,7 @@ class InterfaceLayout(BoxLayout):
     def __init__(self, **kwargs):
         super(InterfaceLayout, self).__init__(**kwargs)
         self.orientation = "horizontal"
+        
         self.guidelayout = GuideLayout()
         # 좌측에 화장기법 및 브러쉬 선택, 가이드라인 포함 레이아웃
         self.add_widget(MakeupLayout())
@@ -125,11 +174,22 @@ class InterfaceLayout(BoxLayout):
 class MakeupLayout(BoxLayout):
     def __init__(self, **kwargs):
         super(MakeupLayout, self).__init__(**kwargs)
+        self.bg = BeautyGAN()
         self.orientation = "vertical"
         # 화장기법 및 브러쉬 선택
         self.add_widget(SelectMakeUp(size_hint=(1, .8)))
         # 가이드라인 선택 버튼
-        self.add_widget(Button(background_normal='./images/guideline.png', size_hint=(1, .2), border=(0, 0, 0, 0), size_hint_y=None, height=80))
+        guideline = Button(background_normal='./images/guideline.png', size_hint=(1, .2), border=(0, 0, 0, 0), size_hint_y=None, height=80)
+        guideline.bind(on_press=self.guideline_seleted)
+        self.add_widget(guideline)
+
+    def guideline_seleted(self, instance):
+
+        paths = self.bg.run(img_path)
+        interface = self.parent
+        guidelayout = interface.guidelayout
+        
+        guidelayout.guide_select(paths)
 
 
 # 화장기법 및 브러쉬 선택
