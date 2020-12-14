@@ -13,6 +13,8 @@ from kivy.properties import ObjectProperty
 from kivy.uix.floatlayout import FloatLayout
 from kivy.lang import Builder
 from kivy.factory import Factory
+from kivy.utils import *
+from random import random
 
 import os
 
@@ -38,6 +40,7 @@ class GuideLayout(BoxLayout):
 class MainLayout(BoxLayout):
     def __init__(self, **kwargs):
         super(MainLayout, self).__init__(**kwargs)
+        #Window.clearcolor = (0.9, 0.9, 0.9, 1)
         self.orientation = "horizontal"
         self.imageLayout = ImageLayout(size_hint=(.6, 1))
         self.interfaceLayout = InterfaceLayout(size_hint=(.4, 1))
@@ -53,16 +56,18 @@ class LoadDialog(FloatLayout):
     
 
 # 시작 시 좌측 이미지 출력
-class ImageLayout(BoxLayout):
+class ImageLayout(FloatLayout):
     def __init__(self, **kwargs):
         super(ImageLayout, self).__init__(**kwargs)
         self.spacing = 10
         self.paintWidget = PaintWidget(size=self.size)
         self.add_widget(self.paintWidget)
-        self.btn = Button(text='File Load', size_hint=(.2, .1), pos_hint=({'center_x': 0.1, 'center_y': 0.5}))
+        self.btn = Button(background_normal='./images/file_upload.png', size_hint=(.2, .15), pos_hint=({'center_x': 0.5, 'center_y': 0.5}), border=(0, 0, 0, 0))
         self.btn.bind(on_release=self.show_load)
         self.add_widget(self.btn)
+        Window.clearcolor = (0.9, 0.9, 0.9, 1)
         with self.canvas.before:
+            Color(0.95, 0.95, 0.95)
             self.rect = Rectangle(size=self.size, pos=self.pos)
             self.bind(size=self._update_rect, pos=self._update_rect)
             
@@ -98,7 +103,6 @@ class PaintWidget(Widget):
         self.brush_size = 2
 
     def on_touch_down(self, touch):
-        print(self.size)
         with self.canvas:
             Color(*self.color)
             touch.ud['line'] = Line(points=(touch.x, touch.y), width=self.brush_size)
@@ -111,7 +115,6 @@ class InterfaceLayout(BoxLayout):
     def __init__(self, **kwargs):
         super(InterfaceLayout, self).__init__(**kwargs)
         self.orientation = "horizontal"
-        self.spacing = 10
         self.guidelayout = GuideLayout()
         # 좌측에 화장기법 및 브러쉬 선택, 가이드라인 포함 레이아웃
         self.add_widget(MakeupLayout())
@@ -123,11 +126,11 @@ class MakeupLayout(BoxLayout):
     def __init__(self, **kwargs):
         super(MakeupLayout, self).__init__(**kwargs)
         self.orientation = "vertical"
-        self.spacing = 10
         # 화장기법 및 브러쉬 선택
         self.add_widget(SelectMakeUp(size_hint=(1, .8)))
         # 가이드라인 선택 버튼
-        self.add_widget(Button(text='Guideline', size_hint=(1, .2)))
+        self.add_widget(Button(background_normal='./images/guideline.png', size_hint=(1, .2), border=(0, 0, 0, 0), size_hint_y=None, height=80))
+
 
 # 화장기법 및 브러쉬 선택
 class SelectMakeUp(BoxLayout):
@@ -135,21 +138,22 @@ class SelectMakeUp(BoxLayout):
         super(SelectMakeUp, self).__init__(**kwargs)
         self.orientation = "vertical"
         # 얼굴 부분 선택 ex) 눈, 입술, 얼굴
-        self.add_widget(SelectFacePart(part='EYE', size_hint=(1, None), height=60))
-        self.add_widget(SelectFacePart(part='LIP', size_hint=(1, None), height=60))
-        self.add_widget(SelectFacePart(part='FACE', size_hint=(1, None), height=60))
+        self.add_widget(SelectFacePart(part='eye', size_hint=(1, None), height=60))
+        self.add_widget(SelectFacePart(part='lip', size_hint=(1, None), height=60))
+        self.add_widget(SelectFacePart(part='face', size_hint=(1, None), height=60))
         # 아래 빈 공간을 채워 위로 레이아웃 올리기 위하여
         self.add_widget(TempLayout())
 
 # 얼굴 부분 선택 ex) 눈, 입술, 얼굴
 class SelectFacePart(BoxLayout):
-    def __init__(self, part='EYE', **kwargs):
+    def __init__(self, part='eye', **kwargs):
         super(SelectFacePart, self).__init__(**kwargs)
         self.orientation = "vertical"
         self.btn_pressed=False
         self.tempLayout = TempLayout()
-        self.selectMakeupType = SelectMakeUpType()
-        self.btn = Button(text=part, size_hint_y=None, height=60)
+        self.part = part
+        self.selectMakeupType = SelectMakeUpType(makeup_type=part)
+        self.btn = Button(background_normal="./images/select_"+part+".png", size_hint_y=None, height=60, border=(0,0,0,0))
         self.btn.bind(on_press=self.facepart_selected)
         self.add_widget(self.btn)
         self.add_widget(self.tempLayout)
@@ -157,7 +161,10 @@ class SelectFacePart(BoxLayout):
     # 버튼 클릭시 하위 화장기법 선택
     def facepart_selected(self, instance):
         if not self.btn_pressed:
-            self.height=240
+            if self.part == 'lip':
+                self.height=180
+            else:
+                self.height=240
             #self.remove_widget(self.tempLayout)
             self.add_widget(self.selectMakeupType)
             self.btn_pressed = True
@@ -170,11 +177,13 @@ class SelectFacePart(BoxLayout):
 
 # 화장 기법 선택 ex) 아이웨도우, 마스카라, 아이라이너
 class SelectMakeUpType(BoxLayout):
-    def __init__(self, makeup_types=["shadow", "mascara", "eyeliner"], **kwargs):
+    def __init__(self, makeup_type='eye', **kwargs):
         super(SelectMakeUpType, self).__init__(**kwargs)
         self.orientation="vertical"
         self.size_hint=(1, None)
-        self.makeup_types = makeup_types
+        self.makeup_types = ["shadow", "mascara", "liner"]
+        if makeup_type == 'lip':
+            self.makeup_types = ['lipstick', 'tint']
         self.makeup_type_layouts  = []
         for makeup_type in self.makeup_types:
             layout = SelectMakeUpTypeTemp(makeup_type=makeup_type, size_hint_y=None, height=60)
@@ -186,9 +195,9 @@ class SelectMakeUpTypeTemp(BoxLayout):
         super(SelectMakeUpTypeTemp, self).__init__(**kwargs)
         self.orientation="vertical"
         self.makeup_type=makeup_type
-        self.selectBrushType = SelectBrushType()
+        self.selectBrushType = SelectBrushType(makeup_type=self.makeup_type)
         self.btn_pressed=False
-        self.btn = Button(text=self.makeup_type, size_hint_y=None, height=60)
+        self.btn = Button(background_normal="./images/select_"+self.makeup_type+".png", size_hint_y=None, height=60, border=(0,0,0,0))
         self.btn.bind(on_press=self.makeuptype_selected)
         self.add_widget(self.btn)
         
@@ -212,14 +221,16 @@ class SelectMakeUpTypeTemp(BoxLayout):
 
             
 class SelectBrushType(BoxLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, makeup_type="liner", **kwargs):
         super(SelectBrushType, self).__init__(**kwargs)
         self.orientation="horizontal"
         self.button_pressed=False
-        self.selectColor = SelectColor()
-        self.button1 = Button(text="1")
-        self.button2 = Button(text="2")
-        self.button3 = Button(text="3")
+        self.makeup_type = makeup_type
+        self.selectColor = SelectColor(makeup_type=self.makeup_type)
+        self.spacing=5
+        self.button1 = Button(background_normal="./images/brush_1.png", border=(0, 0, 0, 0))
+        self.button2 = Button(background_normal="./images/brush_2.png", border=(0, 0, 0, 0))
+        self.button3 = Button(background_normal="./images/brush_3.png", border=(0, 0, 0, 0))
 
         self.button1.bind(on_press=self.brush_selected)
         self.button2.bind(on_press=self.brush_selected)
@@ -234,27 +245,70 @@ class SelectBrushType(BoxLayout):
         for i in range(7):
             main_layout = main_layout.parent
         self.main_layout = main_layout
-        self.paintWidget = self.main_layout.imageLayout.paintWidget.brush_size=int(instance.text)
+        if instance == self.button1:
+            self.paintWidget = self.main_layout.imageLayout.paintWidget.brush_size=1
+        if instance == self.button2:
+            self.paintWidget = self.main_layout.imageLayout.paintWidget.brush_size=2
+        if instance == self.button3:
+            self.paintWidget = self.main_layout.imageLayout.paintWidget.brush_size=3
         self.guidelayout = self.main_layout.interfaceLayout.guidelayout
-        if self.guidelayout.guide_type != 'color':
-            self.guidelayout.add_widget(self.guidelayout.selectColor)
-            self.guidelayout.guide_type = 'color'
-        """ else:
-            self.guidelayout.remove_widget(self.guidelayout.selectColor)
-            self.button_pressed=False """
+        self.guidelayout.clear_widgets()
+        self.guidelayout.selectColor.change_color(makeup_type=self.makeup_type)
+        self.guidelayout.add_widget(self.guidelayout.selectColor)
+        self.guidelayout.guide_type = 'color'
+           
         
 
 class SelectColor(GridLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, makeup_type='liner', **kwargs):
         super(SelectColor, self).__init__(**kwargs)
         self.cols=2
-        colors = ['Blue', 'Red', 'Green', 'White']
-        color_buttons = []
+        self.color_buttons = []
+        colors = ['ross-kiss', 'red', 'green']
+
         for color in colors:
             btn = Button(text=color)
             btn.bind(on_press=self.color_selected)
             self.add_widget(btn)
-            color_buttons.append(btn)
+            self.color_buttons.append(btn)
+    
+    def change_color(self, makeup_type='liner'):
+        self.clear_widgets()
+        self.color_buttons.clear()
+        if makeup_type=='shadow':
+            color_list=['golden\nbrown', 'mat\nsand', 'mypitch', 'deep\nnight', 'milkyway', 'Rose\nmacaron', 'Sweet\nrose', 'Vine', 'Sparkling\npink', 'Pink\nmoscato', 'Champagne\nparty']
+        elif makeup_type=='mascara':
+            color_list=['black', 'rosy\nbrown', 'brown', 'natural', 'Gray', 'Clear\nblack', 'Innocent\nbrown', 'Mystical\nPlum\nBurgundy']
+        elif makeup_type=='liner':
+            color_list=['liner1', 'liner2', 'liner3']
+        for color in color_list:
+            real_color = get_random_color(0.6)
+            if color=="golden\nbrown":
+                real_color=(0.819, 0.55, 0.45, 0.6)
+            elif color=="mat\nsand":
+                real_color=(0.9, 0.74, 0.66, 0.6)
+            elif color=="mypitch":
+                real_color=(0.96, 0.78, 0.69, 0.6)
+            elif color=="deep\nnight":
+                real_color=(0.66, 0.43, 0.38, 0.6)
+            elif color=="milkyway":
+                real_color=(0.83, 0.78, 0.74, 0.6)
+            elif color=="black":
+                real_color=(0.7, 0.7, 0.7, 0.6)
+            elif color=="rosy\nbrown":
+                real_color=(0.65, 0.31, 0.33, 0.6)
+            elif color=="brown":
+                real_color=(0.96, 0.78, 0.69, 0.6)
+            elif color=="liner1":
+                real_color=(0.19,0.19,0.24,0.6)
+            elif color=="liner2":
+                real_color=(0.34,0.27,0.27,0.6)
+            elif color=="liner3":
+                real_color=(0.41,0.27,0.27,0.6)
+            btn = Button(text=color, font_size=10, halign='center', background_color=real_color, size_hint_y=None, height=90)
+            btn.bind(on_press=self.color_selected)
+            self.add_widget(btn)
+            self.color_buttons.append(btn)
 
     def color_selected(self, instance):
         main_layout = self
@@ -262,14 +316,25 @@ class SelectColor(GridLayout):
             main_layout = main_layout.parent
         self.main_layout = main_layout
         self.paintWidget = self.main_layout.imageLayout.paintWidget
-        print(self.paintWidget.size)
-        print(self.paintWidget.canvas)
-        if instance.text=="Blue":
-            self.paintWidget.color=(0, 0, 1, 0.6)
-        elif instance.text=="Red":
-            self.paintWidget.color=(1, 0, 0, 0.6)
-        elif instance.text=="Green":
-            self.paintWidget.color=(0, 1, 0, 0.6)
+        color = (random(), random(), random(), 0.6)
+        if instance.text=="golden\nbrown":
+            color=(0.819, 0.55, 0.45, 0.6)
+        elif instance.text=="mat\nsand":
+            color=(0.9, 0.74, 0.66, 0.6)
+        elif instance.text=="mypitch":
+            color=(0.96, 0.78, 0.69, 0.6)
+        elif instance.text=="deep\nnight":
+            color=(0.66, 0.43, 0.38, 0.6)
+        elif instance.text=="milkyway":
+            color=(0.83, 0.78, 0.74, 0.6)
+        elif instance.text=="black":
+            color=(0.7, 0.7, 0.7, 0.6)
+        elif instance.text=="rosy\nbrown":
+            color=(0.65, 0.31, 0.33, 0.6)
+        elif instance.text=="brown":
+            color=(0.96, 0.78, 0.69, 0.6)
+        self.paintWidget.color=color
+                
 
 # 스크롤 뷰로 생성
 '''
@@ -291,6 +356,7 @@ class SelectMakeUpType(ScrollView):
 
 class GuideLineApp(App):
     def build(self):
+        Window.size = (1200, 720)
         return MainLayout()
 
 
